@@ -4,7 +4,12 @@ import { crawlers } from "@/lib/crawlers";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const adminPassword = request.headers.get("x-admin-password");
+  const authorized =
+    authHeader === `Bearer ${process.env.CRON_SECRET}` ||
+    adminPassword === process.env.ADMIN_PASSWORD;
+
+  if (!authorized) {
     return Response.json({ error: "未授权" }, { status: 401 });
   }
 

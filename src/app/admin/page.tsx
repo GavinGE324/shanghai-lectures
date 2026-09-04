@@ -61,6 +61,19 @@ export default function AdminPage() {
       </div>
     );
   }
+  const [crawling, setCrawling] = useState(false);
+
+  const runCrawl = async () => {
+    setCrawling(true);
+    const res = await fetch("/api/crawl", {
+      headers: { "x-admin-password": password },
+    });
+    const data = await res.json();
+    setCrawling(false);
+    alert(`爬虫完成：${JSON.stringify(data.results)}`);
+    fetchLectures(tab);
+  };
+
   return (
     <div className="min-h-screen">
       <header className="bg-white border-b border-[var(--border)] sticky top-0 z-10">
@@ -69,12 +82,21 @@ export default function AdminPage() {
             <h1 className="text-xl font-bold">管理后台</h1>
             <a href="/" className="text-sm text-[var(--primary)]">← 返回首页</a>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-[var(--primary)] text-white rounded px-4 py-2 text-sm hover:bg-[var(--primary-hover)]"
-          >
-            {showForm ? "取消" : "+ 手动添加"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={runCrawl}
+              disabled={crawling}
+              className="bg-green-600 text-white rounded px-4 py-2 text-sm hover:bg-green-700 disabled:opacity-50"
+            >
+              {crawling ? "爬取中..." : "运行爬虫"}
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="bg-[var(--primary)] text-white rounded px-4 py-2 text-sm hover:bg-[var(--primary-hover)]"
+            >
+              {showForm ? "取消" : "+ 手动添加"}
+            </button>
+          </div>
         </div>
       </header>
 
