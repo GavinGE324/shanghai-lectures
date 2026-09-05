@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [tab, setTab] = useState<"pending" | "published">("pending");
   const [showForm, setShowForm] = useState(false);
+  const [crawling, setCrawling] = useState(false);
 
   const fetchLectures = async (status: string) => {
     const res = await fetch(`/api/lectures?status=${status}`);
@@ -61,8 +62,6 @@ export default function AdminPage() {
       </div>
     );
   }
-  const [crawling, setCrawling] = useState(false);
-
   const runCrawl = async () => {
     setCrawling(true);
     const res = await fetch("/api/crawl", {
