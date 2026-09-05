@@ -11,12 +11,14 @@ export default function AdminPage() {
   const [tab, setTab] = useState<"pending" | "published">("pending");
   const [showForm, setShowForm] = useState(false);
   const [crawling, setCrawling] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fetchLectures = async (status: string) => {
-    setLectures([]);
-    const res = await fetch(`/api/lectures?status=${status}`);
+    setLoading(true);
+    const res = await fetch(`/api/lectures?status=${status}&_t=${Date.now()}`, { cache: "no-store" });
     const data = await res.json();
     setLectures(Array.isArray(data) ? data : []);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -126,7 +128,9 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {lectures.length === 0 ? (
+        {loading ? (
+          <p className="text-center text-[var(--muted)] py-12">加载中...</p>
+        ) : lectures.length === 0 ? (
           <p className="text-center text-[var(--muted)] py-12">暂无数据</p>
         ) : (
           <div className="space-y-3">
