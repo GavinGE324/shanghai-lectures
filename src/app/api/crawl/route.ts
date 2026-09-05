@@ -23,12 +23,19 @@ export async function GET(request: NextRequest) {
       for (const lecture of lectures) {
         const { data: existing } = await supabase
           .from("lectures")
-          .select("id")
+          .select("id, status")
           .eq("source_url", lecture.source_url)
-          .in("status", ["pending", "published"])
           .limit(1);
 
-        if (existing && existing.length > 0) continue;
+        if (existing && existing.length > 0) {
+          if (existing[0].status === "rejected") {
+            await supabase
+              .from("lectures")
+              .update({ ...lecture, status: "pending" })
+              .eq("id", existing[0].id);
+          }
+          continue;
+        }
 
         await supabase.from("lectures").insert({
           ...lecture,
