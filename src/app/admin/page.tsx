@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [crawling, setCrawling] = useState(false);
 
   const fetchLectures = async (status: string) => {
+    setLectures([]);
     const res = await fetch(`/api/lectures?status=${status}`);
     const data = await res.json();
     setLectures(Array.isArray(data) ? data : []);
