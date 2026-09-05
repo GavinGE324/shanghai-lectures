@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
           .from("lectures")
           .select("id")
           .eq("source_url", lecture.source_url)
+          .in("status", ["pending", "published"])
           .limit(1);
 
         if (existing && existing.length > 0) continue;
