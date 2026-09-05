@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createSupabase } from "@/lib/supabase";
 import { NextRequest } from "next/server";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const supabase = createSupabase();
   const { id } = await params;
   const password = request.headers.get("x-admin-password");
 
@@ -31,6 +32,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const supabase = createSupabase();
   const { id } = await params;
   const password = request.headers.get("x-admin-password");
 

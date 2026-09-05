@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createSupabase } from "@/lib/supabase";
 import { crawlers } from "@/lib/crawlers";
 
 export async function GET(request: NextRequest) {
+  const supabase = createSupabase();
   const authHeader = request.headers.get("authorization");
   const adminPassword = request.headers.get("x-admin-password");
   const authorized =

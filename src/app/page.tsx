@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createSupabase } from "@/lib/supabase";
 import type { Lecture, Category } from "@/lib/types";
 import { CATEGORIES, CATEGORY_LABELS } from "@/lib/types";
 
@@ -13,6 +13,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchLectures() {
       setLoading(true);
+      const supabase = createSupabase();
       let query = supabase
         .from("lectures")
         .select("*")

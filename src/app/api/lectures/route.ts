@@ -1,7 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createSupabase } from "@/lib/supabase";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
+  const supabase = createSupabase();
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const status = searchParams.get("status") || "published";
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const supabase = createSupabase();
   const body = await request.json();
   const password = request.headers.get("x-admin-password");
 
