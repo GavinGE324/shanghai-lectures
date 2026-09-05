@@ -70,7 +70,16 @@ export default function AdminPage() {
     });
     const data = await res.json();
     setCrawling(false);
-    alert(`爬虫完成：${JSON.stringify(data.results)}`);
+    if (data.error) {
+      alert(`爬虫失败：${data.error}`);
+    } else if (data.results) {
+      const summary = data.results.map((r: { crawler: string; count?: number; error?: string }) =>
+        r.error ? `${r.crawler}: 错误` : `${r.crawler}: ${r.count}条`
+      ).join("\n");
+      alert(`爬虫完成：\n${summary}`);
+    } else {
+      alert(`异常响应：${JSON.stringify(data)}`);
+    }
     fetchLectures(tab);
   };
 
