@@ -150,3 +150,168 @@ export const fudanCrawler: Crawler = {
     return results;
   },
 };
+
+export const shanghaitechCrawler: Crawler = {
+  name: "shanghaitech-lectures",
+  university: "上海科技大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const res = await fetch(
+        "https://www.shanghaitech.edu.cn/_wp3services/generalQuery?queryObj=articles&siteId=8&columnId=15079&pageIndex=1&rows=20",
+        { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" } }
+      );
+      const json = await res.json();
+      const articles = json?.data?.rows || [];
+      for (const art of articles) {
+        const title = art.title?.trim() || "";
+        if (!title || title.length < 4) continue;
+        const publishTime = art.publishTime || "";
+        const dm = publishTime.match(/(\d{4})-(\d{2})-(\d{2})\s*(\d{2}):(\d{2})/);
+        const date = dm ? `${dm[1]}-${dm[2]}-${dm[3]}T${dm[4]}:${dm[5]}:00` : "";
+        if (!date || !isFutureDate(date)) continue;
+        const url = art.url?.startsWith("http") ? art.url : `https://www.shanghaitech.edu.cn${art.url || ""}`;
+        results.push({ title, speaker: "详见原帖", date, university: "上海科技大学", category: guessCategory(title), source_url: url });
+      }
+    } catch (e) { console.error("ShanghaiTech crawler error:", e); }
+    return results;
+  },
+};
+
+export const ecustCrawler: Crawler = {
+  name: "ecust-lectures",
+  university: "华东理工大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const html = await fetchHTML("https://news.ecust.edu.cn/jzbg/list.htm");
+      const re = /<li[^>]*class="news"[^>]*>([\s\S]*?)<\/li>/gi;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const block = m[1];
+        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const title = titleMatch?.[1]?.trim() || "";
+        if (!title || title.length < 4) continue;
+        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const timeMatch = block.match(/(\d{4})-(\d{2})-(\d{2})\s*(\d{2}):(\d{2}):(\d{2})/);
+        const date = timeMatch ? `${timeMatch[1]}-${timeMatch[2]}-${timeMatch[3]}T${timeMatch[4]}:${timeMatch[5]}:00` : "";
+        if (!date || !isFutureDate(date)) continue;
+        const fullUrl = href.startsWith("http") ? href : `https://news.ecust.edu.cn${href}`;
+        results.push({ title, speaker: "详见原帖", date, university: "华东理工大学", category: guessCategory(title), source_url: fullUrl });
+      }
+    } catch (e) { console.error("ECUST crawler error:", e); }
+    return results;
+  },
+};
+
+export const shouCrawler: Crawler = {
+  name: "shou-lectures",
+  university: "上海海洋大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const html = await fetchHTML("https://www.shou.edu.cn/xsjz/list.htm");
+      const re = /<div[^>]*class="col_news_item"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const block = m[1];
+        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const title = titleMatch?.[1]?.trim() || "";
+        if (!title || title.length < 4) continue;
+        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const dateMatch = block.match(/(\d{4})-(\d{2})-(\d{2})/);
+        const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T14:00:00` : "";
+        if (!date || !isFutureDate(date)) continue;
+        const fullUrl = href.startsWith("http") ? href : `https://www.shou.edu.cn${href}`;
+        results.push({ title, speaker: "详见原帖", date, university: "上海海洋大学", category: guessCategory(title), source_url: fullUrl });
+      }
+    } catch (e) { console.error("SHOU crawler error:", e); }
+    return results;
+  },
+};
+
+export const shuCrawler: Crawler = {
+  name: "shu-lectures",
+  university: "上海大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const html = await fetchHTML("https://www.shu.edu.cn/xnrc/xsbg.htm");
+      const re = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const block = m[1];
+        const titleMatch = block.match(/<p[^>]*class="bt"[^>]*>([\s\S]*?)<\/p>/i);
+        const title = titleMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || "";
+        if (!title || title.length < 4) continue;
+        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const dateDiv = block.match(/<div[^>]*class="sj"[^>]*>([\s\S]*?)<\/div>/i)?.[1] || "";
+        const dayMatch = dateDiv.match(/(\d{1,2})/);
+        const monthMatch = dateDiv.match(/(\d{1,2})月/) || dateDiv.match(/[-\/](\d{1,2})/);
+        const now = new Date();
+        let date = "";
+        if (dayMatch && monthMatch) {
+          const day = dayMatch[1].padStart(2, "0");
+          const month = monthMatch[1].padStart(2, "0");
+          date = `${now.getFullYear()}-${month}-${day}T14:00:00`;
+        }
+        if (!date || !isFutureDate(date)) continue;
+        const fullUrl = href.startsWith("http") ? href : `https://www.shu.edu.cn${href.replace(/^\.\.\//, "/")}`;
+        results.push({ title, speaker: "详见原帖", date, university: "上海大学", category: guessCategory(title), source_url: fullUrl });
+      }
+    } catch (e) { console.error("SHU crawler error:", e); }
+    return results;
+  },
+};
+
+export const shisuCrawler: Crawler = {
+  name: "shisu-lectures",
+  university: "上海外国语大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const html = await fetchHTML("https://news.shisu.edu.cn/research-/4/index.html");
+      const re = /<li[^>]*class="clear in-xy"[^>]*>([\s\S]*?)<\/li>/gi;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const block = m[1];
+        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const title = titleMatch?.[1]?.trim() || "";
+        if (!title || title.length < 4) continue;
+        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const dateMatch = block.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+        const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T14:00:00` : "";
+        if (!date || !isFutureDate(date)) continue;
+        const fullUrl = href.startsWith("http") ? href : `https://news.shisu.edu.cn${href}`;
+        results.push({ title, speaker: "详见原帖", date, university: "上海外国语大学", category: guessCategory(title), source_url: fullUrl });
+      }
+    } catch (e) { console.error("SHISU crawler error:", e); }
+    return results;
+  },
+};
+
+export const sufeCrawler: Crawler = {
+  name: "sufe-lectures",
+  university: "上海财经大学",
+  async crawl(): Promise<CrawledLecture[]> {
+    const results: CrawledLecture[] = [];
+    try {
+      const html = await fetchHTML("https://news.sufe.edu.cn/xsky/list.htm");
+      const re = /<li[^>]*class="news"[^>]*>([\s\S]*?)<\/li>/gi;
+      let m;
+      while ((m = re.exec(html)) !== null) {
+        const block = m[1];
+        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const title = titleMatch?.[1]?.trim() || "";
+        if (!title || title.length < 4) continue;
+        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const dateMatch = block.match(/(\d{4})年(\d{2})月(\d{2})日/);
+        const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T14:00:00` : "";
+        if (!date || !isFutureDate(date)) continue;
+        const fullUrl = href.startsWith("http") ? href : `https://news.sufe.edu.cn${href}`;
+        results.push({ title, speaker: "详见原帖", date, university: "上海财经大学", category: guessCategory(title), source_url: fullUrl });
+      }
+    } catch (e) { console.error("SUFE crawler error:", e); }
+    return results;
+  },
+};
