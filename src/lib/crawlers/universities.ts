@@ -162,7 +162,7 @@ export const shanghaitechCrawler: Crawler = {
         { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" } }
       );
       const json = await res.json();
-      const articles = json?.data?.rows || [];
+      const articles = Array.isArray(json?.data) ? json.data : json?.data?.rows || [];
       for (const art of articles) {
         const title = art.title?.trim() || "";
         if (!title || title.length < 4) continue;
@@ -185,16 +185,18 @@ export const ecustCrawler: Crawler = {
     const results: CrawledLecture[] = [];
     try {
       const html = await fetchHTML("https://news.ecust.edu.cn/jzbg/list.htm");
-      const re = /<li[^>]*class="news"[^>]*>([\s\S]*?)<\/li>/gi;
+      const re = /<li[^>]*class="news\s[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
       let m;
       while ((m = re.exec(html)) !== null) {
         const block = m[1];
-        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const titleMatch = block.match(/<a[^>]*title='([^']*)'[^>]*>/i) || block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
         const title = titleMatch?.[1]?.trim() || "";
         if (!title || title.length < 4) continue;
-        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
-        const timeMatch = block.match(/(\d{4})-(\d{2})-(\d{2})\s*(\d{2}):(\d{2}):(\d{2})/);
-        const date = timeMatch ? `${timeMatch[1]}-${timeMatch[2]}-${timeMatch[3]}T${timeMatch[4]}:${timeMatch[5]}:00` : "";
+        const href = block.match(/<a[^>]*href='([^']*)'[^>]*>/i)?.[1] || block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const timeMatch = block.match(/<span[^>]*class="newshow"[^>]*>([\s\S]*?)<\/span>/i);
+        const timeStr = timeMatch?.[1]?.trim() || "";
+        const dm = timeStr.match(/(\d{4})-(\d{2})-(\d{2})\s*(\d{2}):(\d{2})/);
+        const date = dm ? `${dm[1]}-${dm[2]}-${dm[3]}T${dm[4]}:${dm[5]}:00` : "";
         if (!date || !isFutureDate(date)) continue;
         const fullUrl = href.startsWith("http") ? href : `https://news.ecust.edu.cn${href}`;
         results.push({ title, speaker: "详见原帖", date, university: "华东理工大学", category: guessCategory(title), source_url: fullUrl });
@@ -211,14 +213,14 @@ export const shouCrawler: Crawler = {
     const results: CrawledLecture[] = [];
     try {
       const html = await fetchHTML("https://www.shou.edu.cn/xsjz/list.htm");
-      const re = /<div[^>]*class="col_news_item"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi;
+      const re = /<div[^>]*class="col_news_item[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
       let m;
       while ((m = re.exec(html)) !== null) {
         const block = m[1];
-        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const titleMatch = block.match(/<a[^>]*title='([^']*)'[^>]*>/i) || block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
         const title = titleMatch?.[1]?.trim() || "";
         if (!title || title.length < 4) continue;
-        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const href = block.match(/<a[^>]*href='([^']*)'[^>]*>/i)?.[1] || block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
         const dateMatch = block.match(/(\d{4})-(\d{2})-(\d{2})/);
         const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T14:00:00` : "";
         if (!date || !isFutureDate(date)) continue;
@@ -226,40 +228,6 @@ export const shouCrawler: Crawler = {
         results.push({ title, speaker: "详见原帖", date, university: "上海海洋大学", category: guessCategory(title), source_url: fullUrl });
       }
     } catch (e) { console.error("SHOU crawler error:", e); }
-    return results;
-  },
-};
-
-export const shuCrawler: Crawler = {
-  name: "shu-lectures",
-  university: "上海大学",
-  async crawl(): Promise<CrawledLecture[]> {
-    const results: CrawledLecture[] = [];
-    try {
-      const html = await fetchHTML("https://www.shu.edu.cn/xnrc/xsbg.htm");
-      const re = /<li[^>]*>([\s\S]*?)<\/li>/gi;
-      let m;
-      while ((m = re.exec(html)) !== null) {
-        const block = m[1];
-        const titleMatch = block.match(/<p[^>]*class="bt"[^>]*>([\s\S]*?)<\/p>/i);
-        const title = titleMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || "";
-        if (!title || title.length < 4) continue;
-        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
-        const dateDiv = block.match(/<div[^>]*class="sj"[^>]*>([\s\S]*?)<\/div>/i)?.[1] || "";
-        const dayMatch = dateDiv.match(/(\d{1,2})/);
-        const monthMatch = dateDiv.match(/(\d{1,2})月/) || dateDiv.match(/[-\/](\d{1,2})/);
-        const now = new Date();
-        let date = "";
-        if (dayMatch && monthMatch) {
-          const day = dayMatch[1].padStart(2, "0");
-          const month = monthMatch[1].padStart(2, "0");
-          date = `${now.getFullYear()}-${month}-${day}T14:00:00`;
-        }
-        if (!date || !isFutureDate(date)) continue;
-        const fullUrl = href.startsWith("http") ? href : `https://www.shu.edu.cn${href.replace(/^\.\.\//, "/")}`;
-        results.push({ title, speaker: "详见原帖", date, university: "上海大学", category: guessCategory(title), source_url: fullUrl });
-      }
-    } catch (e) { console.error("SHU crawler error:", e); }
     return results;
   },
 };
@@ -297,14 +265,14 @@ export const sufeCrawler: Crawler = {
     const results: CrawledLecture[] = [];
     try {
       const html = await fetchHTML("https://news.sufe.edu.cn/xsky/list.htm");
-      const re = /<li[^>]*class="news"[^>]*>([\s\S]*?)<\/li>/gi;
+      const re = /<li[^>]*class="news\s[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
       let m;
       while ((m = re.exec(html)) !== null) {
         const block = m[1];
-        const titleMatch = block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
+        const titleMatch = block.match(/<a[^>]*title='([^']*)'[^>]*>/i) || block.match(/<a[^>]*title="([^"]*)"[^>]*>/i);
         const title = titleMatch?.[1]?.trim() || "";
         if (!title || title.length < 4) continue;
-        const href = block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
+        const href = block.match(/<a[^>]*href='([^']*)'[^>]*>/i)?.[1] || block.match(/<a[^>]*href="([^"]*)"[^>]*>/i)?.[1] || "";
         const dateMatch = block.match(/(\d{4})年(\d{2})月(\d{2})日/);
         const date = dateMatch ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T14:00:00` : "";
         if (!date || !isFutureDate(date)) continue;
